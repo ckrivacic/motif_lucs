@@ -209,7 +209,6 @@ if __name__=='__main__':
             # df_vdm['cluster_score'] = row['cluster_score']
             # df_target = pd.concat([df_target, df_vdm], ignore_index=True)
         # df_target['target_resi'] = resi
-        print('Time for vdM iteration: {}'.format(end_vdm))
     df_out = pd.concat(dataframes, ignore_index=True)
     df_out.to_csv(
             os.path.join(
@@ -218,3 +217,4 @@ if __name__=='__main__':
                     )
             )
     end_vdm = time.time() - start_vdm
+    print('Time for vdM iteration: {}'.format(end_vdm))
