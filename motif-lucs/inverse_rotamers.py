@@ -103,11 +103,11 @@ class InvRot(object):
         each inverse rotamer '''
         atoms = ['N', 'C', 'CA']
         rows = []
-        query_resi = 65
+        # query_resi = 65
         for rot in self.rotamer_set:
             row = {
-                    'query_resi': query_resi,
-                    'target_resi': resi,
+                    # 'query_resi': query_resi,
+                    'query_resi': resi,
                     }
             xyz_rot = []
             xyz_pose = []

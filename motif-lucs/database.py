@@ -33,12 +33,15 @@ class Combs(object):
                 self.resname)
         self.df = truncate_df(pd.read_pickle(self.df_path))
         score_log_likelihood(self.df)
+        self.rotation, self.translation = self.get_transform()
+        self.df = apply_transformation(self.rotation, self.translation,
+                self.df)
 
     def get_transform(self):
         ala_path = os.path.join(self.base, 'ideal_ala_' +
-                self.query_type + '.pkl')
+                self.target_type + '.pkl')
         ala_df = pd.read_pickle(ala_path)
-        align_atoms = rel_coords_dict[self.query_type]
+        align_atoms = rel_coords_dict[self.target_type]
 
         query_coords = residue_coords_from_prody(self.residue,
                 self.resnum, align_atoms)
@@ -50,9 +53,16 @@ class Combs(object):
             xyz = [row['c_x'].iloc[0], row['c_y'].iloc[0], row['c_z'].iloc[0]]
             ala_xyz.append(xyz)
         
-        xyz_array = np.array(xyz_array)
+        xyz_array = np.array(ala_xyz)
         rotation, translation = get_superimpose_transformation(xyz_array, query_coords)
         return rotation, translation
+
+    # @property
+    def unique_vdms(self):
+        groups = self.df.groupby(['iFG_count', 'vdM_count',
+            'cluster_score'])
+        return groups.size().reset_index()[['iFG_count', 'vdM_count',
+            'cluster_score']]
 
 
 def df_path(query_type, target_type, resname,
@@ -143,39 +153,65 @@ if __name__=='__main__':
 
     ex_target_path = 'test_inputs/6dkm.pdb'
     atoms = prody.parsePDB(ex_target_path)
-    query = atoms.select('chain A')
+    target = atoms.select('chain A')
     #target = atoms.select('chain B')
 
-    interface_residues = [63, 20, 56, 44, 65]
-    for resi in interface_residues:
-        #xyz = residue_coords_from_prody(query, resi, )
-        combs = Combs('carboxamide', 'SC', query, resi)
-    xyz = []
-    for atom in rel_coords_dict['SC']:
-        xyz.extend(tar_sel.select('name {}'.format(atom)).getCoords())
-    print('Coordinates for transformation:')
-    coords = xyz
-    print(coords)
-
-    rot, trans = get_transform(coords, 'SC')
-    import time
-    start_time = time.time()
-    print(combs.df.iloc[1])
-    combs.df = apply_transformation(rot, trans, combs.df)
-    print(combs.df.iloc[1])
-    total = time.time() - start_time
-    print('Time elapsed: {}'.format(total))
-
     init('-extrachi_cutoff 0 -ex1 -ex2')
-    invrot = InvRot(combs, 3702, 1)
-    invrot.create_inverse_rotamers()
     print('IMPORTING POSE')
     pose = pose_from_file('test_inputs/6dkm.pdb')
     print('SPLITTING POSE')
-    pose = pose.split_by_chain(1)
+    pose = pose.split_by_chain(2)
     print('POSE SPLIT')
-    start_time = time.time()
-    rows = invrot.get_superimpose_transformations(pose, 5)
-    print(rows)
-    total = time.time() - start_time
-    print('Time elapsed: {}'.format(total))
+
+    #interface_residues = [63, 20, 56, 44, 65]
+    interface_residues = [65, 58]
+    import time
+    out_df = pd.DataFrame()
+    for resi in interface_residues:
+        dataframes = []
+        # df_target = pd.DataFrame()
+        print('TRANSFORMING DATABASE FOR RESI {}'.format(resi))
+        start_time = time.time()
+        combs = Combs('carboxamide', 'SC', target, resi)
+        total = time.time() - start_time
+        print('Time elapsed: {}'.format(total))
+
+        print('Getting unique iFG/vdM combinations')
+        unique = combs.unique_vdms()
+        print('# unique vdMs: {}'.format(unique.shape[0]))
+
+        print('Iterating through vdMs')
+        start_vdm = time.time()
+        # df_vdm = pd.DataFrame()
+        for index, row in unique.iterrows():
+            print('ANALYZING VDM {} OF {}'.format(index, unique.shape[0]))
+            iFG = row['iFG_count']
+            vdM = row['vdM_count']
+            invrot = InvRot(combs, iFG, vdM)
+            invrot.create_inverse_rotamers()
+            start_resi = time.time()
+            for query_residue in range(1, pose.size() + 1):
+                df_resi = pd.DataFrame(invrot.get_superimpose_transformations(pose,
+                        query_residue))
+                #df_vdm = pd.concat([df_vdm, df_resi], ignore_index=True)
+                df_resi['iFG_count'] = iFG
+                df_resi['vdM_count'] = vdM
+                df_resi['cluster_score'] = row['cluster_score']
+                df_resi['target_resi'] = resi
+                dataframes.append(df_resi)
+            end_resi = time.time() - start_resi
+            print('Time to iterate all residues: {}'.format(end_resi))
+            # df_vdm['iFG_count'] = iFG
+            # df_vdm['vdM_count'] = vdM
+            # df_vdm['cluster_score'] = row['cluster_score']
+            # df_target = pd.concat([df_target, df_vdm], ignore_index=True)
+        # df_target['target_resi'] = resi
+        print('Time for vdM iteration: {}'.format(end_vdm))
+    df_out = pd.concat(dataframes, ignore_index=True)
+    df_out.to_csv(
+            os.path.join(
+                    'test_outputs', 
+                    'df_target_{}.csv'.format(resi)
+                    )
+            )
+    end_vdm = time.time() - start_vdm
