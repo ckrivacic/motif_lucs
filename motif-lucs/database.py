@@ -166,7 +166,6 @@ if __name__=='__main__':
     #interface_residues = [63, 20, 56, 44, 65]
     interface_residues = [65, 58]
     import time
-    out_df = pd.DataFrame()
     for resi in interface_residues:
         dataframes = []
         # df_target = pd.DataFrame()
