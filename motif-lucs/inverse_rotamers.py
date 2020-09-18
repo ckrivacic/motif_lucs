@@ -22,7 +22,7 @@ class InvRot(object):
         self.ifg = ifg
         self.vdm = vdm
         #self.query = combs.query
-        self.alignment_atoms = rel_coords_dict[self.combs.target_type]
+        self.alignment_atoms = rel_coords_dict[self.combs.query_type]
         self.vdm_type = 'hb_sc'
         self.get_rows()
         self.vdm_atoms = all_interactions[self.vdm_type][self.vdm_restype]

@@ -21,15 +21,15 @@ rel_coords_dict = dict(SC=['CA', 'N', 'C'], HNCA=['N', 'H', 'CA'],
 
 
 class Combs(object):
-    def __init__(self, query_type, target_type, prody_obj, resnum):
+    def __init__(self, target_type, query_type, prody_obj, resnum):
         date = '20181009'
         self.base = '/Users/codykrivacic/intelligent_design/combs_database_/' 
-        self.query_type = query_type
         self.target_type = target_type
+        self.query_type = query_type
         self.resnum = resnum
         self.residue = prody_obj.select('resnum {}'.format(self.resnum))
         self.resname = self.residue.getResnames()[0]
-        self.df_path = df_path(self.query_type, self.target_type,
+        self.df_path = df_path(self.target_type, self.query_type,
                 self.resname)
         self.df = truncate_df(pd.read_pickle(self.df_path))
         score_log_likelihood(self.df)
@@ -39,11 +39,11 @@ class Combs(object):
 
     def get_transform(self):
         ala_path = os.path.join(self.base, 'ideal_ala_' +
-                self.target_type + '.pkl')
+                self.query_type + '.pkl')
         ala_df = pd.read_pickle(ala_path)
-        align_atoms = rel_coords_dict[self.target_type]
+        align_atoms = rel_coords_dict[self.query_type]
 
-        query_coords = residue_coords_from_prody(self.residue,
+        target_coords = residue_coords_from_prody(self.residue,
                 self.resnum, align_atoms)
 
         ala_xyz = []
@@ -54,7 +54,7 @@ class Combs(object):
             ala_xyz.append(xyz)
         
         xyz_array = np.array(ala_xyz)
-        rotation, translation = get_superimpose_transformation(xyz_array, query_coords)
+        rotation, translation = get_superimpose_transformation(xyz_array, target_coords)
         return rotation, translation
 
     # @property
@@ -65,12 +65,12 @@ class Combs(object):
             'cluster_score']]
 
 
-def df_path(query_type, target_type, resname,
+def df_path(target_type, query_type, resname,
         base = '/Users/codykrivacic/intelligent_design/combs_database_/'):
     base_extended = os.path.join(base, 'representatives', 'hb_only')
-    path = os.path.join(base_extended, query_type)
+    path = os.path.join(base_extended, target_type)
     date = find_df_dates(base)[path]
-    return os.path.join(path, date, target_type,
+    return os.path.join(path, date, query_type,
                 resname.upper() + '.pkl')
 
 
@@ -106,9 +106,9 @@ def select_plane(vdm_num, ifg_num, label, df):
     sub_df = df[(df['iFG_count']==ifg_num) & (df['vDM_count']==vdm_num)]
 
 
-def normalize_dataframe_to_residue(query_coords, label, df,
+def normalize_dataframe_to_residue(target_coords, label, df,
         base='/Users/codykrivacic/intelligent_design/combs_database_/'):
-    rotation, translation = get_transform(query_coords, label, base=base)
+    rotation, translation = get_transform(target_coords, label, base=base)
     df = apply_transformation(rotation, translation, df)
 
 
@@ -178,6 +178,9 @@ if __name__=='__main__':
 
         print('Getting unique iFG/vdM combinations')
         unique = combs.unique_vdms()
+        # print(unique)
+        # print(unique[(unique['iFG_count']=='1001') &
+            # (unique['vdM_count']=='2')])
         print('# unique vdMs: {}'.format(unique.shape[0]))
 
         print('Iterating through vdMs')
