@@ -22,15 +22,18 @@ rel_coords_dict = dict(SC=['CA', 'N', 'C'], HNCA=['N', 'H', 'CA'],
 
 class Combs(object):
     def __init__(self, target_type, query_type, prody_obj, resnum):
+        if not 'COMBS' in os.environ:
+            print('Please define COMBS path in os environment.')
+            sys.exit()
         date = '20181009'
-        self.base = '/Users/codykrivacic/intelligent_design/combs_database_/' 
+        self.base = os.environ['COMBS'] 
         self.target_type = target_type
         self.query_type = query_type
         self.resnum = resnum
         self.residue = prody_obj.select('resnum {}'.format(self.resnum))
         self.resname = self.residue.getResnames()[0]
         self.df_path = df_path(self.target_type, self.query_type,
-                self.resname)
+                self.resname, base=self.base)
         self.df = truncate_df(pd.read_pickle(self.df_path))
         score_log_likelihood(self.df)
         self.rotation, self.translation = self.get_transform()
