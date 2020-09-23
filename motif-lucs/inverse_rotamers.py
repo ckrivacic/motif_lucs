@@ -6,6 +6,7 @@ from numeric import *
 from itertools import compress
 from database import rel_coords_dict
 from contact_labels import *
+import pandas as pd
 
 
 """
@@ -13,6 +14,70 @@ Generate inverse rotamers based on functional group placement in combs
 database, then attach to design chain and get rotation and translation
 compared to some 'base' level.
 """
+
+
+class CombsHelper(object):
+
+    def __init__(self, combs, ifg, vdm):
+        self.combs = combs
+        self.ifg = ifg
+        self.vdm = vdm
+        self.alignment_atoms = rel_coords_dict[self.combs.query_type]
+        self.vdm_type = 'hb_sc'
+        self.get_rows()
+        # self.vdm_atoms = all_interactions[self.vdm_type][self.vdm_restype]
+        self.get_motif_positions()
+
+    def get_rows(self):
+        self.sub_df = self.combs.df[(self.combs.df['iFG_count']==str(self.ifg)) &
+                (self.combs.df['vdM_count']==str(self.vdm))] 
+        self.vdm_restype = self.sub_df.iloc[0]['resname']
+
+    def get_motif_positions(self, atoms=None):
+        print(self.sub_df['name'])
+        if atoms:
+            sub_df = self.sub_df[self.sub_df['name'].isin(atoms)]
+        else:
+            sub_df = self.sub_df
+        positions = []
+        for idx, row in sub_df.iterrows():
+            position = {}
+            position['atom_name'] = row['name']
+            position['coord'] = [row['c_x'], row['c_y'], row['c_z']]
+            positions.append(position)
+            self.positions = pd.DataFrame(positions)
+
+    def get_superimpose_transformations(self, pose, resi):
+        '''Get rotation and translation matrices of a pose's residue to
+        each inverse rotamer '''
+        rows = []
+        row = {
+                # 'query_resi': query_resi,
+                'query_resi': resi,
+                }
+        xyz_pose = []
+        xyzarray = []
+        restrained_atoms = []
+
+
+        for index, position in self.positions.iterrows():
+            xyzarray.append(position['coord'])
+            restrained_atoms.append(position['atom_name'])
+        print(xyzarray)
+
+        for atom in self.positions['atom_name']:
+            xyzV_pose = xyzV_to_np_array(pose.residue(resi).xyz(atom))
+            xyz_pose.append(xyzV_pose)
+        print(xyz_pose)
+        xyz_array = np.array(xyzarray)
+        xyz_pose = np.array(xyz_pose)
+        rotation, translation = \
+                get_superimpose_transformation(xyz_pose, xyz_array)
+        row['rot'] = rotation
+        row['trans'] = translation
+        rows.append(row)
+
+        return rows
 
 
 class InvRot(object):
@@ -125,34 +190,3 @@ class InvRot(object):
             rows.append(row)
 
         return rows
-
-#cst_test = ConstrainToInvRot()
-#rotamer_set = cst_test.create_inverse_rotamers('GLU')
-#cst_test.choose_rotamer()
-#cst_test.make_constraints_from_inverse_rotamer()
-
-#designable, repackable = choose_designable_residues(cst_test.pose, [38])
-#task_factory = setup_task_factory(cst_test.pose, designable, repackable,
-#        motif_dict={38:'E'},layered_design=False, prepare_focus=True)
-
-#bb_movable = [i for i in range(1,cst_test.pose.size() + 1)]
-#sc_movable = []
-#fast_relax(cst_test.pose, bb_movable, sc_movable, selectors=False)
-#print(cst_test.pose.constraint_set())
-#print(designable)
-#loops = generate_loops_from_res_selector(cst_test.pose, designable, 38)
-#fast_design(cst_test.pose, designable, repackable, task_factory=task_factory)
-
-
-#model_loops(cst_test.pose, designable, repackable, 38,
-#        task_factory=task_factory, 
-#        fast=True, mover='lhk', resbuffer=4)
-
-#lhk = lhk_xml(task_factory)
-#lhk.apply(cst_test.pose)
-
-
-if __name__=="__main__":
-    init("-ignore_unrecognized_res -extrachi_cutoff 0 -ex1 -ex2 -out:overwrite " +\
-            "-lh:db_path=/home/ckrivacic/rosetta/database/loophash_db/ " +\
-            "-lh:loopsizes 6")
