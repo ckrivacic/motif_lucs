@@ -212,10 +212,10 @@ if __name__=='__main__':
             # df_target = pd.concat([df_target, df_vdm], ignore_index=True)
         # df_target['target_resi'] = resi
         df_out = pd.concat(dataframes, ignore_index=True)
-        df_out.to_csv(
+        df_out.to_pickle(
                 os.path.join(
                         'test_outputs', 
-                        'df_target_{}.csv'.format(resi)
+                        'df_target_{}.pkl'.format(resi)
                         )
                 )
         end_vdm = time.time() - start_vdm
