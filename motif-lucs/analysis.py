@@ -51,6 +51,7 @@ def bin_df(df, degrees=10, angstroms=1):
     print(l.iloc[0:50])
     print(l[l['rot']==(0,0,0)])
     print(i)
+    l.to_pickle('binned.pkl')
 
 
 def prep_df(path):
@@ -94,8 +95,10 @@ def prep_folder(path):
 
 if __name__=='__main__':
     path = sys.argv[1]
+    print('Loading dataframe(s)')
     if os.path.isfile(path):
         df = prep_df(sys.argv[1])
     else:
         df = prep_folder(path)
+    print('Dataframes loaded; binning')
     bin_df(df, degrees=30, angstroms=10)
