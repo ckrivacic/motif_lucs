@@ -24,7 +24,9 @@ def bin_df(df, degrees=10, angstroms=1):
     def bin_array(array, bins):
         '''Digitize a numpy array'''
         inds = np.digitize(array, bins)
+        print(inds)
         binned = tuple([bins[inds[n]-1] for n in range(array.size)])
+        print(binned)
         return binned
 
     df['rgroup'] = df['rot'].apply(bin_rot)
@@ -101,4 +103,6 @@ if __name__=='__main__':
     else:
         df = prep_folder(path)
     print('Dataframes loaded; binning')
+    print('Saving partial dataframe')
+    df.to_pickle('test_outputs/test_df.pkl')
     bin_df(df, degrees=30, angstroms=10)
