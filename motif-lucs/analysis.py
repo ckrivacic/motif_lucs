@@ -1,8 +1,8 @@
 import pandas as pd
 import numpy as np
-import sys, os
+import sys, os, glob
 from ast import literal_eval
-import re
+# import re
 
 def bin_df(df, degrees=10, angstroms=1):
     '''Bin a dataframe by rotation & translation.'''
@@ -74,7 +74,7 @@ def prep_df(path):
         return array
 
     if path.endswith('csv'):
-        df = pd.read_csv(path, nrows=100000)
+        df = pd.read_csv(path, nrows=10000)
     elif path.endswith('pkl'):
         df = pd.read_pickle(path, nrows=10000)
     df['rot'] = df['rot'].apply(make_rot_array)
@@ -84,7 +84,18 @@ def prep_df(path):
 
     return df
 
+def prep_folder(path):
+    dfs = []
+    for filename in glob.glob('{}/*.pkl'.format(path)):
+        dfs.append(prep_df(filename))
+    df = pd.concat(dfs, ignore_index=True)
+
+    return df
 
 if __name__=='__main__':
-    df = prep_df(sys.argv[1])
+    path = sys.argv[1]
+    if os.path.isfile(path):
+        df = prep_df(sys.argv[1])
+    else:
+        df = prep_folder(path)
     bin_df(df, degrees=30, angstroms=10)
