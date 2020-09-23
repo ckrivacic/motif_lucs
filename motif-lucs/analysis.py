@@ -76,10 +76,10 @@ def prep_df(path):
 
     if path.endswith('csv'):
         df = pd.read_csv(path, nrows=10000)
+        df['rot'] = df['rot'].apply(make_rot_array)
+        df['trans'] = df['trans'].apply(make_trans_array)
     elif path.endswith('pkl'):
         df = pd.read_pickle(path)
-    df['rot'] = df['rot'].apply(make_rot_array)
-    df['trans'] = df['trans'].apply(make_trans_array)
     df['tmin'] = df['trans'].apply(lambda x: min(x))
     df['tmax'] = df['trans'].apply(lambda x: max(x))
 
