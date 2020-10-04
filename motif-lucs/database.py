@@ -21,7 +21,8 @@ rel_coords_dict = dict(SC=['CA', 'N', 'C'], HNCA=['N', 'H', 'CA'],
 
 
 class Combs(object):
-    def __init__(self, target_type, query_type, prody_obj, resnum):
+    def __init__(self, target_type, query_type, prody_obj, resnum,
+            phipsi=None):
         if not 'COMBS' in os.environ:
             print('Please define COMBS path in os environment.')
             sys.exit()
@@ -159,10 +160,12 @@ if __name__=='__main__':
     target = atoms.select('chain A')
     #target = atoms.select('chain B')
 
-    init('-extrachi_cutoff 0 -ex1 -ex2')
+    # init('-extrachi_cutoff 0 -ex1 -ex2')
+    init()
     print('IMPORTING POSE')
     pose = pose_from_file('test_inputs/6dkm.pdb')
     print('SPLITTING POSE')
+    querypose = pose.split_by_chain(1)
     pose = pose.split_by_chain(2)
     print('POSE SPLIT')
 
@@ -171,6 +174,8 @@ if __name__=='__main__':
     import time
     for resi in interface_residues:
         dataframes = []
+        query_phi = querypose.phi(resi)
+        query_psi = querypose.psi(resi)
         # df_target = pd.DataFrame()
         print('TRANSFORMING DATABASE FOR RESI {}'.format(resi))
         start_time = time.time()

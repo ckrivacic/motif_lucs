@@ -1,3 +1,8 @@
+"""
+Usage:
+    analysis <folder>
+"""
+
 import pandas as pd
 import numpy as np
 import sys, os, glob
@@ -24,13 +29,13 @@ def bin_df(df, degrees=10, angstroms=1):
     def bin_array(array, bins):
         '''Digitize a numpy array'''
         inds = np.digitize(array, bins)
-        print(inds)
+        # print(inds)
         binned = tuple([bins[inds[n]-1] for n in range(array.size)])
-        print(binned)
+        # print(binned)
         return binned
 
-    df['rgroup'] = df['rot'].apply(bin_rot)
-    df['tgroup'] = df['trans'].apply(bin_trans)
+    df['rgroup'] = df['rot_deg_array'].apply(bin_rot)
+    df['tgroup'] = df['trans_array'].apply(bin_trans)
     
     groups = df.groupby(['rgroup', 'tgroup', 'query_resi', 'target_resi'])
 
@@ -60,28 +65,37 @@ def prep_df(path):
     # df = pd.read_csv(sys.argv[1], converters={'rot': literal_eval}, nrows=10000)
     from scipy.spatial.transform import Rotation as R
     def make_rot_array(text):
-        text = text.replace('[', '')
-        text = text.replace(']', '')
-        text = text.replace('\n', ' ')
-        array = np.fromstring(text, sep=' ')
-        array = array.reshape(3, 3)
+        if path.endswith('.csv'):
+            text = text.replace('[', '')
+            text = text.replace(']', '')
+            text = text.replace('\n', ' ')
+            array = np.fromstring(text, sep=' ')
+            array = array.reshape(3, 3)
+        else:
+            array = text
         array = R.from_matrix(array)
         array = array.as_euler('xyz', degrees=True)
         return array
 
     def make_trans_array(text):
-        text = text.replace('[', '')
-        text = text.replace(']', '')
-        text = text.replace('\n', ' ')
-        array = np.fromstring(text, sep=' ')
+        if path.endswith('.csv'):
+            text = text.replace('[', '')
+            text = text.replace(']', '')
+            text = text.replace('\n', ' ')
+            array = np.fromstring(text, sep=' ')
+        else:
+            array = text
         return array
 
     if path.endswith('csv'):
         df = pd.read_csv(path, nrows=10000)
-        df['rot'] = df['rot'].apply(make_rot_array)
-        df['trans'] = df['trans'].apply(make_trans_array)
+        df['rot_deg_array'] = df['rot'].apply(make_rot_array)
+        df['trans_array'] = df['trans'].apply(make_trans_array)
     elif path.endswith('pkl'):
         df = pd.read_pickle(path)
+        df['rot_deg_array'] = df['rot'].apply(make_rot_array)
+        df['trans_array'] = df['trans']
+    # print(df.columns)
     df['tmin'] = df['trans'].apply(lambda x: min(x))
     df['tmax'] = df['trans'].apply(lambda x: max(x))
 
@@ -90,7 +104,9 @@ def prep_df(path):
 def prep_folder(path):
     dfs = []
     for filename in glob.glob('{}/*.pkl'.format(path)):
-        dfs.append(prep_df(filename))
+        sdf = prep_df(filename)
+        # sdf.iloc[0:10000].to_pickle(filename[:-4] + '_test.pkl')
+        dfs.append(sdf)
     df = pd.concat(dfs, ignore_index=True)
 
     return df
@@ -102,7 +118,7 @@ if __name__=='__main__':
         df = prep_df(sys.argv[1])
     else:
         df = prep_folder(path)
+    # print('Saving partial dataframe')
+    # df.iloc[0:10000].to_pickle('test_outputs/test_df.pkl')
     print('Dataframes loaded; binning')
-    print('Saving partial dataframe')
-    df.to_pickle('test_outputs/test_df.pkl')
     bin_df(df, degrees=30, angstroms=10)
