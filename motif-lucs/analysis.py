@@ -88,7 +88,7 @@ def prep_df(path):
         return array
 
     if path.endswith('csv'):
-        df = pd.read_csv(path, nrows=10000)
+        df = pd.read_csv(path)#, nrows=10000)
         df['rot_deg_array'] = df['rot'].apply(make_rot_array)
         df['trans_array'] = df['trans'].apply(make_trans_array)
     elif path.endswith('pkl'):
@@ -96,14 +96,14 @@ def prep_df(path):
         df['rot_deg_array'] = df['rot'].apply(make_rot_array)
         df['trans_array'] = df['trans']
     # print(df.columns)
-    df['tmin'] = df['trans'].apply(lambda x: min(x))
-    df['tmax'] = df['trans'].apply(lambda x: max(x))
+    df['tmin'] = df['trans_array'].apply(lambda x: min(x))
+    df['tmax'] = df['trans_array'].apply(lambda x: max(x))
 
     return df
 
 def prep_folder(path):
     dfs = []
-    for filename in glob.glob('{}/*.pkl'.format(path)):
+    for filename in glob.glob('{}/*.csv'.format(path)):
         sdf = prep_df(filename)
         # sdf.iloc[0:10000].to_pickle(filename[:-4] + '_test.pkl')
         dfs.append(sdf)
