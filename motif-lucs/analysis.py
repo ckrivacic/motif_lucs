@@ -9,6 +9,21 @@ import sys, os, glob
 from ast import literal_eval
 # import re
 
+
+def count_bins(df):
+    rows = []
+    groups = df.groupby(['rot', 'trans'])
+    for name, group in groups:
+        row = {}
+        row['rot'] = name[0]
+        row['trans'] = name[1]
+        size = len(group.index)
+        rows.append(row)
+
+    return pd.DataFrame(rows).sort_values('size', ascending=False,
+            ignore_index=True)
+
+
 def bin_df(df, degrees=10, angstroms=1):
     '''Bin a dataframe by rotation & translation.'''
     # print(df['rot'])
@@ -58,7 +73,9 @@ def bin_df(df, degrees=10, angstroms=1):
     print(l.iloc[0:50])
     print(l[l['rot']==(0,0,0)])
     print(i)
-    l.to_pickle('binned.pkl')
+    # l.to_pickle('binned.pkl')
+
+    return l
 
 
 def prep_df(path):
@@ -121,4 +138,14 @@ if __name__=='__main__':
     # print('Saving partial dataframe')
     # df.iloc[0:10000].to_pickle('test_outputs/test_df.pkl')
     print('Dataframes loaded; binning')
-    bin_df(df, degrees=30, angstroms=10)
+    binned = bin_df(df, degrees=30, angstroms=10)
+    
+    bincount = count_bins(binned)
+    final = pd.DataFrame()
+    for row in bincount.iloc[0:100].iterrows():
+        df_for_bin = df[(df['rgroup']==row['rot']) &
+                (df['tgroup']==row['trans'])].copy(deep=True)
+        newbin = bin_df(df_for_bin, degrees=10, angstroms=1.0)
+        final = pd.concat([final, newbin], ignore_index=True)
+
+    final.to_csv('drilldown.csv')
